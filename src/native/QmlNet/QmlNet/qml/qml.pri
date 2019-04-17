@@ -15,7 +15,8 @@ HEADERS += \
     $$PWD/NetListModel.h \
     $$PWD/QtWebEngine.h \
     $$PWD/QCoreApplication.h \
-    $$PWD/QTest.h
+    $$PWD/QTest.h \
+    $$PWD/NetQObject.h
 
 SOURCES += \
     $$PWD/QQmlApplicationEngine.cpp \
@@ -34,4 +35,5 @@ SOURCES += \
     $$PWD/NetListModel.cpp \
     $$PWD/QtWebEngine.cpp \
     $$PWD/QCoreApplication.cpp \
-    $$PWD/QTest.cpp
+    $$PWD/QTest.cpp \
+    $$PWD/NetQObject.cpp

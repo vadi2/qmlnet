@@ -8,6 +8,7 @@
 #include <QmlNet/types/NetReference.h>
 #include <QmlNet/qml/NetVariant.h>
 #include <QmlNet/qml/NetVariantList.h>
+#include <QmlNet/qml/NetJsValue.h>
 #include <QSharedPointer>
 #include <QString>
 

@@ -73,6 +73,7 @@ namespace Qml.Net.Internal
             Utilities = LoadInteropType<UtilitiesInterop>(library, loader);
             QtWebEngine = LoadInteropType<QtWebEngineInterop>(library, loader);
             QTest = LoadInteropType<QTestInterop>(library, loader);
+            NetQObject = LoadInteropType<NetQObjectInterop>(library, loader);
 
             // RuntimeManager.ConfigureRuntimeDirectory may set these environment variables.
             // However, they only really work when called with Qt.PutEnv.
@@ -122,6 +123,8 @@ namespace Qml.Net.Internal
         public static QtWebEngineInterop QtWebEngine { get; }
 
         public static QTestInterop QTest { get; }
+        
+        public static NetQObjectInterop NetQObject { get; }
 
         private static T LoadInteropType<T>(IntPtr library, IPlatformLoader loader)
             where T : new()

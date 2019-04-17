@@ -81,7 +81,7 @@ namespace Qml.Net.Internal.Qml
             get => Utilities.ContainerToString(Interop.NetVariant.GetString(Handle));
             set => Interop.NetVariant.SetString(Handle, value);
         }
-
+        
         public DateTimeOffset? DateTime
         {
             get
@@ -135,6 +135,16 @@ namespace Qml.Net.Internal.Qml
             set => Interop.NetVariant.SetJsValue(Handle, value?.Handle ?? IntPtr.Zero);
         }
 
+        public NetQObject QObject
+        {
+            get
+            {
+                var result = Interop.NetVariant.GetQObject(Handle);
+                return result == IntPtr.Zero ? null : new NetQObject(result);
+            }
+            set => Interop.NetVariant.SetQObject(Handle, value?.Handle ?? IntPtr.Zero);
+        }
+
         public void Clear()
         {
             Interop.NetVariant.Clear(Handle);
@@ -174,6 +184,8 @@ namespace Qml.Net.Internal.Qml
 
                 case NetVariantType.JsValue:
                     return JsValue.AsDynamic();
+                case NetVariantType.QObject:
+                    return QObject.AsDynamic();
                 default:
                     throw new NotImplementedException($"unhandled type {VariantType}");
             }
@@ -328,6 +340,16 @@ namespace Qml.Net.Internal.Qml
         public GetJsValueDel GetJsValue { get; set; }
 
         public delegate IntPtr GetJsValueDel(IntPtr variant);
+
+        [NativeSymbol(Entrypoint = "net_variant_setQObject")]
+        public SetQObjectDel SetQObject { get; set; }
+
+        public delegate void SetQObjectDel(IntPtr variant, IntPtr jsValue);
+
+        [NativeSymbol(Entrypoint = "net_variant_getQObject")]
+        public GetQObjectDel GetQObject { get; set; }
+        
+        public delegate IntPtr GetQObjectDel(IntPtr variant);
 
         [NativeSymbol(Entrypoint = "net_variant_clear")]
         public ClearDel Clear { get; set; }
