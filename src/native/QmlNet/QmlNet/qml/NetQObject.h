@@ -7,6 +7,19 @@
 
 class NetVariant;
 class NetVariantList;
+class NetDelegate;
+
+class NetQObjectSignalConnection : public QObject
+{
+    Q_OBJECT
+public:
+    NetQObjectSignalConnection(QSharedPointer<NetDelegate> netDelegate);
+    ~NetQObjectSignalConnection();
+public slots:
+    void signalRaised();
+private:
+    QSharedPointer<NetDelegate> _netDelegate;
+};
 
 class NetQObject
 {
@@ -16,6 +29,8 @@ public:
     QObject* getQObject();
     QSharedPointer<NetVariant> getProperty(QString propertyName);
     void setProperty(QString propertyName, QSharedPointer<NetVariant> value);
+    QSharedPointer<NetVariant> invokeMethod(QString methodName);
+    QSharedPointer<NetQObjectSignalConnection> attachSignal(QString signalName, QSharedPointer<NetDelegate> callback);
 private:
     QObject* _qObject;
     bool _ownsObject;
@@ -23,6 +38,10 @@ private:
 
 struct NetQObjectContainer {
     QSharedPointer<NetQObject> qObject;
+};
+
+struct NetQObjectSignalConnectionContainer {
+    QSharedPointer<NetQObjectSignalConnection> signalConnection;
 };
 
 #endif // NETQOBJECT_H

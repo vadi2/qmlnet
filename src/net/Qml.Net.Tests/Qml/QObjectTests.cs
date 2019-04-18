@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
+using FluentAssertions.Execution;
 using Moq;
 using Xunit;
 
@@ -15,111 +17,109 @@ namespace Qml.Net.Tests.Qml
         }
 
         [Fact]
-        public void Can_get_qobject()
-        {
-            INetQObject qObject = null;
-            Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
-                .Callback(new Action<dynamic>(x => qObject = x));
-            
-            RunQmlTest(
-                "test",
-                @"
-                    test.method(testQObject)
-                ");
-
-            Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
-            qObject.Should().NotBeNull();
-        }
-
-        [Fact]
         public void Can_get_property_on_qobject()
         {
-            Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
-                .Callback(new Action<dynamic>(x =>
-                {
-                    ((int) x.readOnly).Should().Be(3);
-                }));
-            
-            RunQmlTest(
-                "test",
-                @"
-                    test.method(testQObject)
-                ");
-
-            Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
+            Assert(qObject =>
+            {
+                qObject.GetProperty("readOnly").Should().Be(3);
+            });
         }
         
         [Fact]
         public void Can_set_property_on_qobject()
         {
-            Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
-                .Callback(new Action<dynamic>(x =>
-                {
-                    // No real way to test this.
-                    // I suppose it doesn't throw, eh?
-                    x.writeOnly = 0;
-                }));
-            
-            RunQmlTest(
-                "test",
-                @"
-                    test.method(testQObject)
-                ");
-
-            Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
+            Assert(qObject =>
+            {
+                // No real way to test this.
+                // I suppose it doesn't throw, eh?
+                qObject.SetProperty("writeOnly", 3);
+            });
         }
         
         [Fact]
         public void Can_set_and_get_property_on_qobject()
         {
-            Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
-                .Callback(new Action<dynamic>(x =>
-                {
-                    x.readAndWrite = 340;
-                    ((int) x.readAndWrite).Should().Be(340);
-                }));
-            
-            RunQmlTest(
-                "test",
-                @"
-                    test.method(testQObject)
-                ");
-
-            Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
+            Assert(qObject =>
+            {
+                qObject.SetProperty("readAndWrite", 340);
+                qObject.GetProperty("readAndWrite").Should().Be(340);
+            });
         }
 
         [Fact]
         public void Can_get_set_object_name()
         {
-            Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
-                .Callback(new Action<dynamic>(x =>
-                {
-                    x.objectName = "testtt";
-                    ((string) x.objectName).Should().Be("testtt");
-                }));
-            
-            RunQmlTest(
-                "test",
-                @"
-                    test.method(testQObject)
-                ");
-
-            Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
+            Assert(qObject =>
+            {
+                var d = (dynamic) qObject;
+                d.objectName = "testtt";
+                ((string) d.objectName).Should().Be("testtt");
+            });
         }
 
         [Fact]
         public void Can_set_qobject_on_global_context_property()
         {
+            Assert(qObject =>
+            {
+                var d = (dynamic) qObject;
+                var property = Guid.NewGuid().ToString().Replace("-", "");
+                d.objectName = property;
+                qmlApplicationEngine.SetContextProperty(property, d);
+                var result = qmlApplicationEngine.GetContextProperty(property);
+                (result is INetQObject).Should().BeTrue();
+                result.Should().NotBeNull();
+                ((string)d.objectName).Should().Be(property);
+            });
+        }
+
+        [Fact]
+        public void Can_invoke_method_on_qobject()
+        {
+            Assert(qObject =>
+            {
+                // TODO: Assert
+                qObject.InvokeMethod("testSlot");
+            });
+        }
+        
+        [Fact]
+        public void Can_attach_signal_to_qobject()
+        {
+            Assert(qObject =>
+            {
+                int raised = 0;
+                var handler = qObject.AttachSignal("testSignal", new Action(() =>
+                {
+                    raised++;
+                }));
+                handler.Should().NotBeNull();
+                
+                qObject.InvokeMethod("testSlot");
+                raised.Should().Be(1);
+                
+                handler.Dispose();
+
+                qObject.InvokeMethod("testSlot");
+                raised.Should().Be(1);
+            });
+        }
+
+        private void Assert(Action<INetQObject> action)
+        {
+            Exception assertException = null;
+            
             Mock.Setup(x => x.Method(It.IsAny<INetQObject>()))
                 .Callback(new Action<dynamic>(x =>
                 {
-                    var property = Guid.NewGuid().ToString().Replace("-", "");
-                    x.objectName = property;
-                    qmlApplicationEngine.SetContextProperty(property, x);
-                    var result = qmlApplicationEngine.GetContextProperty(property);
-                    (result is INetQObject).Should().BeTrue();
-                    result.Should().NotBeNull();
-                    ((string)((dynamic) result).objectName).Should().Be(property);
+                    try
+                    {
+                        action(x as INetQObject);
+                    }
+                    catch (Exception ex)
+                    {
+                        assertException = ex;
+                    }
                 }));
             
             RunQmlTest(
@@ -129,6 +129,10 @@ namespace Qml.Net.Tests.Qml
                 ");
 
             Mock.Verify(x => x.Method(It.IsAny<INetQObject>()), Times.Once);
+            if (assertException != null)
+            {
+                throw new Exception(assertException.Message, assertException);
+            }
         }
     }
 }

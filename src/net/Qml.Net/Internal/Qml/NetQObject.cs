@@ -1,6 +1,7 @@
 using System;
 using System.Dynamic;
 using System.Runtime.InteropServices;
+using Qml.Net.Internal.Types;
 
 namespace Qml.Net.Internal.Qml
 {
@@ -24,6 +25,18 @@ namespace Qml.Net.Internal.Qml
         public void SetProperty(string propertyName, NetVariant value)
         {
             Interop.NetQObject.SetProperty(Handle, propertyName, value?.Handle ?? IntPtr.Zero);
+        }
+
+        public NetVariant InvokeMethod(string methodName)
+        {
+            var result = Interop.NetQObject.InvokeMethod(Handle, methodName);
+            return result != IntPtr.Zero ? new NetVariant(result) : null;
+        }
+
+        public NetQObjectSignalConnection AttachSignal(string signalName, NetDelegate netDelegate)
+        {
+            var result = Interop.NetQObject.AttachSignal(Handle, signalName, netDelegate.Handle);
+            return result == IntPtr.Zero ? null : new NetQObjectSignalConnection(result);
         }
         
         public dynamic AsDynamic()
@@ -49,36 +62,66 @@ namespace Qml.Net.Internal.Qml
             
             public override bool TryGetMember(GetMemberBinder binder, out object result)
             {
-                var property = _qObject.GetProperty(binder.Name);
-                if (property == null)
-                {
-                    result = null;
-                }
-                else
-                {
-                    object unpacked = null;
-                    Helpers.Unpackvalue(ref unpacked, property);
-                    result = unpacked;
-                }
+                result = GetProperty(binder.Name);
+                // TODO: Check if this was actually a property
                 return true;
             }
 
             public override bool TrySetMember(SetMemberBinder binder, object value)
             {
+                SetProperty(binder.Name, value);
+                // TODO: Check if this was actually a property
+                return true;
+            }
+
+            public object GetProperty(string propertyName)
+            {
+                var property = _qObject.GetProperty(propertyName);
+                if (property == null)
+                {
+                    return null;
+                }
+
+                object unpacked = null;
+                Helpers.Unpackvalue(ref unpacked, property);
+                property.Dispose();
+                return unpacked;
+            }
+
+            public void SetProperty(string propertyName, object value)
+            {
                 if (value == null)
                 {
-                    _qObject.SetProperty(binder.Name, null);
+                    _qObject.SetProperty(propertyName, null);
                 }
                 else
                 {
                     using (var variant = new NetVariant())
                     {
                         Helpers.PackValue(value, variant);
-                        _qObject.SetProperty(binder.Name, variant);
+                        _qObject.SetProperty(propertyName, variant);
                     }
                 }
+            }
 
-                return true;
+            public object InvokeMethod(string methodName)
+            {
+                using (var result = _qObject.InvokeMethod(methodName))
+                {
+                    if (result == null)
+                    {
+                        return null;
+                    }
+                    object unpacked = null;
+                    Helpers.Unpackvalue(ref unpacked, result);
+                    result.Dispose();
+                    return unpacked;
+                }
+            }
+
+            public IDisposable AttachSignal(string signalName, Delegate handler)
+            {
+                return _qObject.AttachSignal(signalName, NetDelegate.FromDelegate(handler));
             }
         }
     }
@@ -99,5 +142,15 @@ namespace Qml.Net.Internal.Qml
         public SetPropertyDel SetProperty { get; set; }
         
         public delegate IntPtr SetPropertyDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string propertyName, IntPtr netVariant);
+
+        [NativeSymbol(Entrypoint = "net_qobject_invokeMethod")]
+        public InvokeMethodDel InvokeMethod { get; set; }
+        
+        public delegate IntPtr InvokeMethodDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string methodName);
+        
+        [NativeSymbol(Entrypoint = "net_qobject_attachSignal")]
+        public AttachSignalDel AttachSignal { get; set; }
+        
+        public delegate IntPtr AttachSignalDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string signalName, IntPtr netDelegate);
     }
 }
