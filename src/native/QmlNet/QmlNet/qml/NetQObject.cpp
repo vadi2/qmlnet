@@ -21,7 +21,7 @@ QMetaMethod NetQObjectSignalConnectionBase::getSignalHandler()
 
 void NetQObjectSignalConnectionBase::signalRaised()
 {
-    qDebug() << "raised";
+    // Dummy, handled in NetQObjectSignalConnection::qt_metacall()
 }
 
 NetQObjectSignalConnection::NetQObjectSignalConnection(QSharedPointer<NetReference> delegate,
@@ -39,32 +39,30 @@ NetQObjectSignalConnection::~NetQObjectSignalConnection()
 
 int NetQObjectSignalConnection::qt_metacall(QMetaObject::Call c, int id, void** a)
 {
-    if(c == QMetaObject::InvokeMetaMethod)
-    {
-        QMetaMethod method = metaObject()->method(id);
-        if(method.name() == "signalRaised") {
-            qDebug() << "signal raised!";
+    if(c == QMetaObject::InvokeMetaMethod) {
+        int offset = this->metaObject()->methodOffset();
+        if(id < offset) {
+            return QObject::qt_metacall(c, id, a);
+        }
 
-            qDebug() << senderSignalIndex();
+        if(this->metaObject()->indexOfSlot("signalRaised()") == id) {
             QMetaMethod signal = _qObject->metaObject()->method(senderSignalIndex());
-            qDebug() << "signal: " << signal.name();
 
             // Convert signal args to QVariantList
-            QVariantList args;
+            QSharedPointer<NetVariantList> netParameters = QSharedPointer<NetVariantList>(new NetVariantList());
             for (int i = 0; i < signal.parameterCount(); ++i) {
-                args << QVariant(signal.parameterType(i), a[i+1]);
+                QVariant arg = QVariant(signal.parameterType(i), a[i+1]);
+                netParameters->add(NetVariant::fromQVariant(&arg));
             }
 
+            QmlNet::invokeDelegate(_delegate, netParameters);
+
+            return -1;
         }
     }
-    return -1;
+
+    return id;
 }
-
-
-//void NetQObjectSignalConnection::signalRaised()
-//{
-//    QmlNet::invokeDelegate(_delegate, QSharedPointer<NetVariantList>(new NetVariantList()));
-//}
 
 NetQObject::NetQObject(QObject* qObject, bool ownsObject) :
     _qObject(qObject),
@@ -126,22 +124,82 @@ QSharedPointer<NetVariant> NetQObject::invokeMethod(QString methodName, QSharedP
         return nullptr;
     }
 
-//    QGenericReturnArgument returnValue,
-//    QGenericArgument val0 = QGenericArgument(nullptr),
-//    QGenericArgument val1 = QGenericArgument(),
-//    QGenericArgument val2 = QGenericArgument(),
-//    QGenericArgument val3 = QGenericArgument(),
-//    QGenericArgument val4 = QGenericArgument(),
-//    QGenericArgument val5 = QGenericArgument(),
-//    QGenericArgument val6 = QGenericArgument(),
-//    QGenericArgument val7 = QGenericArgument(),
-//    QGenericArgument val8 = QGenericArgument(),
-//    QGenericArgument val9 = QGenericArgument()
+    int parameterCount = 0;
+    if(parameters != nullptr) {
+        parameterCount = parameters->count();
+    }
+
+    if(parameterCount > 10) {
+        qWarning() << "Attempting to invoke a method with too many parameters: current: " << parameters->count() << " expected: <=10";
+        // TODO: return error code indicating invalid call
+        return nullptr;
+    }
+
     QGenericReturnArgument returnValue;
-    int v = parameters->get(0)->getInt();
-    qDebug() << v;
-    QGenericArgument val0 = QGenericArgument("Int", static_cast<void *>(&v));
-    if(!method.invoke(_qObject, Qt::DirectConnection, returnValue, val0)) {
+    QGenericArgument val0 = QGenericArgument(nullptr);
+    QGenericArgument val1 = QGenericArgument();
+    QGenericArgument val2 = QGenericArgument();
+    QGenericArgument val3 = QGenericArgument();
+    QGenericArgument val4 = QGenericArgument();
+    QGenericArgument val5 = QGenericArgument();
+    QGenericArgument val6 = QGenericArgument();
+    QGenericArgument val7 = QGenericArgument();
+    QGenericArgument val8 = QGenericArgument();
+    QGenericArgument val9 = QGenericArgument();
+
+    QVariant val0Variant;
+    QVariant val1Variant;
+    QVariant val2Variant;
+    QVariant val3Variant;
+    QVariant val4Variant;
+    QVariant val5Variant;
+    QVariant val6Variant;
+    QVariant val7Variant;
+    QVariant val8Variant;
+    QVariant val9Variant;
+
+    if(parameterCount >= 1) {
+        val0Variant = parameters->get(0)->toQVariant();
+        val0 = QGenericArgument("QVariant", static_cast<void *>(&val0Variant));
+    }
+    if(parameterCount >= 2) {
+        val1Variant = parameters->get(1)->toQVariant();
+        val1 = QGenericArgument("QVariant", static_cast<void *>(&val1Variant));
+    }
+    if(parameterCount >= 3) {
+        val2Variant = parameters->get(2)->toQVariant();
+        val2 = QGenericArgument("QVariant", static_cast<void *>(&val2Variant));
+    }
+    if(parameterCount >= 4) {
+        val3Variant = parameters->get(3)->toQVariant();
+        val3 = QGenericArgument("QVariant", static_cast<void *>(&val3Variant));
+    }
+    if(parameterCount >= 5) {
+        val4Variant = parameters->get(4)->toQVariant();
+        val4 = QGenericArgument("QVariant", static_cast<void *>(&val4Variant));
+    }
+    if(parameterCount >= 6) {
+        val5Variant = parameters->get(5)->toQVariant();
+        val5 = QGenericArgument("QVariant", static_cast<void *>(&val5Variant));
+    }
+    if(parameterCount >= 7) {
+        val6Variant = parameters->get(6)->toQVariant();
+        val6 = QGenericArgument("QVariant", static_cast<void *>(&val6Variant));
+    }
+    if(parameterCount >= 8) {
+        val7Variant = parameters->get(7)->toQVariant();
+        val7 = QGenericArgument("QVariant", static_cast<void *>(&val7Variant));
+    }
+    if(parameterCount >= 9) {
+        val8Variant = parameters->get(8)->toQVariant();
+        val8 = QGenericArgument("QVariant", static_cast<void *>(&val8Variant));
+    }
+    if(parameterCount >= 10) {
+        val9Variant = parameters->get(9)->toQVariant();
+        val9 = QGenericArgument("QVariant", static_cast<void *>(&val9Variant));
+    }
+
+    if(!method.invoke(_qObject, Qt::DirectConnection, returnValue, val0, val1, val2, val3, val4, val5, val6, val7, val8, val9)) {
         return nullptr;
     }
 

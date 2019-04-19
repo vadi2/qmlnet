@@ -120,6 +120,12 @@ namespace Qml.Net.Tests.Qml
                 });
 
                 qObject.InvokeMethod("testSlotWithArg", 33);
+                
+                handler.Dispose();
+                raised = false;
+                
+                qObject.InvokeMethod("testSlotWithArg", 33);
+                raised.Should().BeFalse();
             });
         }
 
