@@ -1,10 +1,11 @@
 #include <QmlNet/qml/NetQObject.h>
 #include <QmlNet/types/NetDelegate.h>
+#include <QmlNet/types/Callbacks.h>
 #include <QMetaMethod>
 #include <QDebug>
 
-NetQObjectSignalConnection::NetQObjectSignalConnection(QSharedPointer<NetDelegate> netDelegate)
-    : _netDelegate(netDelegate)
+NetQObjectSignalConnection::NetQObjectSignalConnection(QSharedPointer<NetReference> delegate)
+    : _delegate(delegate)
 {
 
 }
@@ -16,7 +17,7 @@ NetQObjectSignalConnection::~NetQObjectSignalConnection()
 
 void NetQObjectSignalConnection::signalRaised()
 {
-    // TODO:
+    QmlNet::invokeDelegate(_delegate, QSharedPointer<NetVariantList>(new NetVariantList()));
 }
 
 NetQObject::NetQObject(QObject* qObject, bool ownsObject) :
@@ -64,7 +65,7 @@ QSharedPointer<NetVariant> NetQObject::invokeMethod(QString methodName)
     return nullptr;
 }
 
-QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString signalName, QSharedPointer<NetDelegate> callback)
+QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString signalName, QSharedPointer<NetReference> delegate)
 {
     int signalMethodIndex = -1;
     for(int x = 0; _qObject->metaObject()->methodCount(); x++) {
@@ -90,7 +91,7 @@ QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString sign
         return nullptr;
     }
 
-    QSharedPointer<NetQObjectSignalConnection> signalConnection = QSharedPointer<NetQObjectSignalConnection>(new NetQObjectSignalConnection(callback));
+    QSharedPointer<NetQObjectSignalConnection> signalConnection = QSharedPointer<NetQObjectSignalConnection>(new NetQObjectSignalConnection(delegate));
     QMetaObject::Connection connection = QObject::connect(_qObject,
                                                           SIGNAL(testSignal()),
                                                           signalConnection.data(),
@@ -133,9 +134,9 @@ Q_DECL_EXPORT NetVariantContainer* net_qobject_invokeMethod(NetQObjectContainer*
     return new NetVariantContainer { result };
 }
 
-Q_DECL_EXPORT NetQObjectSignalConnectionContainer* net_qobject_attachSignal(NetQObjectContainer* qObjectContainer, LPWCSTR signalName, NetDelegateContainer netDelegate)
+Q_DECL_EXPORT NetQObjectSignalConnectionContainer* net_qobject_attachSignal(NetQObjectContainer* qObjectContainer, LPWCSTR signalName, NetReferenceContainer delegate)
 {
-    auto signalConnection = qObjectContainer->qObject->attachSignal(QString::fromUtf16(signalName), netDelegate.delegate);
+    auto signalConnection = qObjectContainer->qObject->attachSignal(QString::fromUtf16(signalName), delegate.instance);
     return new NetQObjectSignalConnectionContainer{ signalConnection };
 }
 

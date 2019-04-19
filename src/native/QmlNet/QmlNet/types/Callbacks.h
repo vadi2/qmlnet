@@ -44,6 +44,8 @@ void awaitTask(QSharedPointer<NetReference> target, QSharedPointer<NetJSValue> s
 
 bool serializeNetToString(QSharedPointer<NetReference> instance, QSharedPointer<NetVariant> result);
 
+void invokeDelegate(QSharedPointer<NetReference> del, QSharedPointer<NetVariantList> parameters);
+
 }
 
 #endif // NET_TYPE_INFO_MANAGER_H

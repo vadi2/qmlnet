@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Runtime.InteropServices;
 using Qml.Net.Internal.Types;
@@ -33,10 +34,13 @@ namespace Qml.Net.Internal.Qml
             return result != IntPtr.Zero ? new NetVariant(result) : null;
         }
 
-        public NetQObjectSignalConnection AttachSignal(string signalName, NetDelegate netDelegate)
+        public NetQObjectSignalConnection AttachSignal(string signalName, Del del)
         {
-            var result = Interop.NetQObject.AttachSignal(Handle, signalName, netDelegate.Handle);
-            return result == IntPtr.Zero ? null : new NetQObjectSignalConnection(result);
+            using (var delReference = NetReference.CreateForObject(del))
+            {
+                var result = Interop.NetQObject.AttachSignal(Handle, signalName, delReference.Handle);
+                return result == IntPtr.Zero ? null : new NetQObjectSignalConnection(result);
+            }
         }
         
         public dynamic AsDynamic()
@@ -119,9 +123,28 @@ namespace Qml.Net.Internal.Qml
                 }
             }
 
-            public IDisposable AttachSignal(string signalName, Delegate handler)
+            public IDisposable AttachSignal(string signalName, SignalHandler handler)
             {
-                return _qObject.AttachSignal(signalName, NetDelegate.FromDelegate(handler));
+                var del = new Del();
+                del.Invoked += parameters =>
+                {
+                    var result = new List<object>();
+                    
+                    var parametersCount = parameters.Count;
+                    for (var x = 0; x < parametersCount; x++)
+                    {
+                        using (var parameter = parameters.Get(x))
+                        {
+                            object parameterValue = null;
+                            Helpers.Unpackvalue(ref parameterValue, parameter);
+                            result.Add(parameterValue);
+                        }
+                    }
+
+                    handler(result);
+                };
+                
+                return _qObject.AttachSignal(signalName, del);
             }
         }
     }
@@ -151,6 +174,6 @@ namespace Qml.Net.Internal.Qml
         [NativeSymbol(Entrypoint = "net_qobject_attachSignal")]
         public AttachSignalDel AttachSignal { get; set; }
         
-        public delegate IntPtr AttachSignalDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string signalName, IntPtr netDelegate);
+        public delegate IntPtr AttachSignalDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string signalName, IntPtr del);
     }
 }

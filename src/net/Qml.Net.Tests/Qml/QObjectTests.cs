@@ -89,10 +89,10 @@ namespace Qml.Net.Tests.Qml
             Assert(qObject =>
             {
                 int raised = 0;
-                var handler = qObject.AttachSignal("testSignal", new Action(() =>
+                var handler = qObject.AttachSignal("testSignal", parameters =>
                 {
                     raised++;
-                }));
+                });
                 handler.Should().NotBeNull();
                 
                 qObject.InvokeMethod("testSlot");

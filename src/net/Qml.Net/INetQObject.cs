@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Qml.Net
 {
@@ -10,6 +11,8 @@ namespace Qml.Net
 
         object InvokeMethod(string methodName);
         
-        IDisposable AttachSignal(string signalName, Delegate handler);
+        IDisposable AttachSignal(string signalName, SignalHandler handler);
     }
+    
+    public delegate void SignalHandler(List<object> parameters);
 }
