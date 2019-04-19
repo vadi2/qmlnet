@@ -14,6 +14,7 @@ class NetQObjectSignalConnection : public QObject
 public:
     NetQObjectSignalConnection(QSharedPointer<NetReference> delegate);
     ~NetQObjectSignalConnection();
+    QMetaMethod getSignalHandler();
 public slots:
     void signalRaised();
 private:
@@ -28,7 +29,7 @@ public:
     QObject* getQObject();
     QSharedPointer<NetVariant> getProperty(QString propertyName);
     void setProperty(QString propertyName, QSharedPointer<NetVariant> value);
-    QSharedPointer<NetVariant> invokeMethod(QString methodName);
+    QSharedPointer<NetVariant> invokeMethod(QString methodName, QSharedPointer<NetVariantList> parameters);
     QSharedPointer<NetQObjectSignalConnection> attachSignal(QString signalName, QSharedPointer<NetReference> delegate);
 private:
     QObject* _qObject;

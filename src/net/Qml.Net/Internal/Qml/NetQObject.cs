@@ -28,9 +28,9 @@ namespace Qml.Net.Internal.Qml
             Interop.NetQObject.SetProperty(Handle, propertyName, value?.Handle ?? IntPtr.Zero);
         }
 
-        public NetVariant InvokeMethod(string methodName)
+        public NetVariant InvokeMethod(string methodName, NetVariantList parameters)
         {
-            var result = Interop.NetQObject.InvokeMethod(Handle, methodName);
+            var result = Interop.NetQObject.InvokeMethod(Handle, methodName, parameters?.Handle ?? IntPtr.Zero);
             return result != IntPtr.Zero ? new NetVariant(result) : null;
         }
 
@@ -108,9 +108,22 @@ namespace Qml.Net.Internal.Qml
                 }
             }
 
-            public object InvokeMethod(string methodName)
+            public object InvokeMethod(string methodName, params object[] parameters)
             {
-                using (var result = _qObject.InvokeMethod(methodName))
+                NetVariantList variantParameters = null;
+                if (parameters != null && parameters.Length > 0)
+                {
+                    variantParameters = new NetVariantList();
+                    foreach (var parameter in parameters)
+                    {
+                        using (var variantParameter = NetVariant.From(parameter))
+                        {
+                            variantParameters.Add(variantParameter);
+                        }
+                    }
+                }
+                using (variantParameters)
+                using (var result = _qObject.InvokeMethod(methodName, variantParameters))
                 {
                     if (result == null)
                     {
@@ -169,7 +182,7 @@ namespace Qml.Net.Internal.Qml
         [NativeSymbol(Entrypoint = "net_qobject_invokeMethod")]
         public InvokeMethodDel InvokeMethod { get; set; }
         
-        public delegate IntPtr InvokeMethodDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string methodName);
+        public delegate IntPtr InvokeMethodDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string methodName, IntPtr parameters);
         
         [NativeSymbol(Entrypoint = "net_qobject_attachSignal")]
         public AttachSignalDel AttachSignal { get; set; }

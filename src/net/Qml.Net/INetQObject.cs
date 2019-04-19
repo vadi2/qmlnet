@@ -9,7 +9,7 @@ namespace Qml.Net
 
         void SetProperty(string propertyName, object value);
 
-        object InvokeMethod(string methodName);
+        object InvokeMethod(string methodName, params object[] parameters);
         
         IDisposable AttachSignal(string signalName, SignalHandler handler);
     }

@@ -15,6 +15,11 @@ NetQObjectSignalConnection::~NetQObjectSignalConnection()
 
 }
 
+QMetaMethod NetQObjectSignalConnection::getSignalHandler()
+{
+    return metaObject()->method(metaObject()->methodOffset());
+}
+
 void NetQObjectSignalConnection::signalRaised()
 {
     QmlNet::invokeDelegate(_delegate, QSharedPointer<NetVariantList>(new NetVariantList()));
@@ -59,19 +64,56 @@ void NetQObject::setProperty(QString propertyName, QSharedPointer<NetVariant> va
     }
 }
 
-QSharedPointer<NetVariant> NetQObject::invokeMethod(QString methodName)
+QSharedPointer<NetVariant> NetQObject::invokeMethod(QString methodName, QSharedPointer<NetVariantList> parameters)
 {
-    QMetaObject::invokeMethod(_qObject, methodName.toLocal8Bit().data(), Qt::DirectConnection);
+    // Find the best method
+    int methodIndex = -1;
+    QMetaMethod method;
+    for(int x = 0; x < _qObject->metaObject()->methodCount(); x++) {
+        method = _qObject->metaObject()->method(x);
+        if(method.methodType() == QMetaMethod::Slot || method.methodType() == QMetaMethod::Method) {
+            if(methodName.compare(method.name()) == 0) {
+                methodIndex = x;
+                break;
+            }
+        }
+    }
+
+    if(methodIndex == -1) {
+        qDebug() << "method not found: " << methodName;
+        _qObject->dumpObjectInfo();
+        return nullptr;
+    }
+
+//    QGenericReturnArgument returnValue,
+//    QGenericArgument val0 = QGenericArgument(nullptr),
+//    QGenericArgument val1 = QGenericArgument(),
+//    QGenericArgument val2 = QGenericArgument(),
+//    QGenericArgument val3 = QGenericArgument(),
+//    QGenericArgument val4 = QGenericArgument(),
+//    QGenericArgument val5 = QGenericArgument(),
+//    QGenericArgument val6 = QGenericArgument(),
+//    QGenericArgument val7 = QGenericArgument(),
+//    QGenericArgument val8 = QGenericArgument(),
+//    QGenericArgument val9 = QGenericArgument()
+    QGenericReturnArgument returnValue;
+    int v = parameters->get(0)->getInt();
+    QGenericArgument val0 = QGenericArgument("Int", static_cast<void *>(&v));
+    if(!method.invoke(_qObject, Qt::DirectConnection, returnValue, val0)) {
+        return nullptr;
+    }
+
     return nullptr;
 }
 
 QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString signalName, QSharedPointer<NetReference> delegate)
 {
     int signalMethodIndex = -1;
+    QMetaMethod signalMethod;
     for(int x = 0; _qObject->metaObject()->methodCount(); x++) {
-        QMetaMethod method = _qObject->metaObject()->method(x);
-        if(method.methodType() == QMetaMethod::Signal) {
-            if(signalName.compare(method.name()) == 0) {
+        signalMethod = _qObject->metaObject()->method(x);
+        if(signalMethod.methodType() == QMetaMethod::Signal) {
+            if(signalName.compare(signalMethod.name()) == 0) {
                 signalMethodIndex = x;
                 break;
             }
@@ -88,15 +130,22 @@ QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString sign
                 qDebug().nospace() << "\t" << method.methodSignature();
             }
         }
+        _qObject->dumpObjectInfo();
         return nullptr;
     }
 
     QSharedPointer<NetQObjectSignalConnection> signalConnection = QSharedPointer<NetQObjectSignalConnection>(new NetQObjectSignalConnection(delegate));
+    qDebug() << signalConnection->getSignalHandler().name();
     QMetaObject::Connection connection = QObject::connect(_qObject,
-                                                          SIGNAL(testSignal()),
+                                                          signalMethod,
                                                           signalConnection.data(),
-                                                          SLOT(signalRaised()));
-    qDebug() << connection;
+                                                          signalConnection->getSignalHandler());
+
+    if(!connection) {
+        qDebug() << "Couldn't connect";
+        return nullptr;
+    }
+
     return signalConnection;
 }
 
@@ -125,9 +174,13 @@ Q_DECL_EXPORT void net_qobject_setProperty(NetQObjectContainer* qObjectContainer
     }
 }
 
-Q_DECL_EXPORT NetVariantContainer* net_qobject_invokeMethod(NetQObjectContainer* qObjectContainer, LPWCSTR methodName)
+Q_DECL_EXPORT NetVariantContainer* net_qobject_invokeMethod(NetQObjectContainer* qObjectContainer, LPWCSTR methodName, NetVariantListContainer* parametersContainer)
 {
-    auto result = qObjectContainer->qObject->invokeMethod(QString::fromUtf16(methodName));
+    QSharedPointer<NetVariantList> parameters = nullptr;
+    if(parametersContainer != nullptr) {
+        parameters = parametersContainer->list;
+    }
+    auto result = qObjectContainer->qObject->invokeMethod(QString::fromUtf16(methodName), parameters);
     if(result == nullptr) {
         return nullptr;
     }

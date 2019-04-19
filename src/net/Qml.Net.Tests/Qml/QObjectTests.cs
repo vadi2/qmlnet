@@ -88,7 +88,7 @@ namespace Qml.Net.Tests.Qml
         {
             Assert(qObject =>
             {
-                int raised = 0;
+                var raised = 0;
                 var handler = qObject.AttachSignal("testSignal", parameters =>
                 {
                     raised++;
@@ -102,6 +102,24 @@ namespace Qml.Net.Tests.Qml
 
                 qObject.InvokeMethod("testSlot");
                 raised.Should().Be(1);
+            });
+        }
+
+        [Fact]
+        public void Can_attach_signal_with_arg_to_qobject()
+        {
+            Assert(qObject =>
+            {
+                var raised = false;
+                var handler = qObject.AttachSignal("testSignalWithArg", parameters =>
+                {
+                    raised = true;
+                    parameters.Should().NotBeNull();
+                    parameters.Count.Should().Be(1);
+                    parameters[0].Should().Be(33);
+                });
+
+                qObject.InvokeMethod("testSlotWithArg", 33);
             });
         }
 
