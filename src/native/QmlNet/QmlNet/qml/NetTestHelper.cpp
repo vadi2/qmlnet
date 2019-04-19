@@ -50,6 +50,16 @@ void TestQObject::setPropWithSignal(int value)
     emit propWithSignalChanged();
 }
 
+QVariant TestQObject::getVariantProperty()
+{
+    return _variantValue;
+}
+
+void TestQObject::setVariantProperty(QVariant value)
+{
+    _variantValue = value;
+}
+
 void TestQObject::testSlot()
 {
     emit testSignal();
@@ -58,6 +68,11 @@ void TestQObject::testSlot()
 void TestQObject::testSlotWithArg(int arg)
 {
     emit testSignalWithArg(arg);
+}
+
+QVariant TestQObject::testVariantReturn()
+{
+    return getVariantProperty();
 }
 
 extern "C" {

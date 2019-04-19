@@ -36,10 +36,10 @@ public:
     NetQObject(QObject* qObject, bool ownsObject = false);
     ~NetQObject();
     QObject* getQObject();
-    QSharedPointer<NetVariant> getProperty(QString propertyName);
-    void setProperty(QString propertyName, QSharedPointer<NetVariant> value);
-    QSharedPointer<NetVariant> invokeMethod(QString methodName, QSharedPointer<NetVariantList> parameters);
-    QSharedPointer<NetQObjectSignalConnection> attachSignal(QString signalName, QSharedPointer<NetReference> delegate);
+    QSharedPointer<NetVariant> getProperty(QString propertyName, bool* wasSuccess);
+    void setProperty(QString propertyName, QSharedPointer<NetVariant> value, bool* wasSuccess);
+    QSharedPointer<NetVariant> invokeMethod(QString methodName, QSharedPointer<NetVariantList> parameters, bool* wasSuccess);
+    QSharedPointer<NetQObjectSignalConnection> attachSignal(QString signalName, QSharedPointer<NetReference> delegate, bool* wasSuccess);
 private:
     QObject* _qObject;
     bool _ownsObject;

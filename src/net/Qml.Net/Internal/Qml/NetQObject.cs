@@ -19,18 +19,39 @@ namespace Qml.Net.Internal.Qml
 
         public NetVariant GetProperty(string propertyName)
         {
-            var result = Interop.NetQObject.GetProperty(Handle, propertyName);
+            byte wasSuccessful = 0; 
+            var result = Interop.NetQObject.GetProperty(Handle, propertyName, ref wasSuccessful);
+            if (wasSuccessful == 0)
+            {
+                // Dispose of the type before we throw
+                using(result == IntPtr.Zero ? null : new NetVariant(result)) { }
+                throw new Exception("Getting property failed.");
+            }
             return result != IntPtr.Zero ? new NetVariant(result) : null;
         }
 
         public void SetProperty(string propertyName, NetVariant value)
         {
-            Interop.NetQObject.SetProperty(Handle, propertyName, value?.Handle ?? IntPtr.Zero);
+            byte wasSuccessful = 0; 
+            Interop.NetQObject.SetProperty(Handle, propertyName, value?.Handle ?? IntPtr.Zero, ref wasSuccessful);
+            if (wasSuccessful == 0)
+            {
+                throw new Exception("Setting property failed.");
+            }
         }
 
         public NetVariant InvokeMethod(string methodName, NetVariantList parameters)
         {
-            var result = Interop.NetQObject.InvokeMethod(Handle, methodName, parameters?.Handle ?? IntPtr.Zero);
+            byte wasSuccessful = 0;
+            var result = Interop.NetQObject.InvokeMethod(Handle, methodName, parameters?.Handle ?? IntPtr.Zero, ref wasSuccessful);
+            
+            if (wasSuccessful == 0)
+            {
+                // Dispose of the type before we throw
+                using(result == IntPtr.Zero ? null : new NetVariant(result)) { }
+                throw new Exception("Invoking method failed.");
+            }
+            
             return result != IntPtr.Zero ? new NetVariant(result) : null;
         }
 
@@ -38,7 +59,16 @@ namespace Qml.Net.Internal.Qml
         {
             using (var delReference = NetReference.CreateForObject(del))
             {
-                var result = Interop.NetQObject.AttachSignal(Handle, signalName, delReference.Handle);
+                byte wasSuccessful = 0;
+                var result = Interop.NetQObject.AttachSignal(Handle, signalName, delReference.Handle, ref wasSuccessful);
+
+                if (wasSuccessful == 0)
+                {
+                    // Dispose of the type before we throw
+                    using(result == IntPtr.Zero ? null : new NetQObjectSignalConnection(result)) { }
+                    throw new Exception("Attaching to signal failed.");
+                }
+
                 return result == IntPtr.Zero ? null : new NetQObjectSignalConnection(result);
             }
         }
@@ -172,21 +202,21 @@ namespace Qml.Net.Internal.Qml
         [NativeSymbol(Entrypoint = "net_qobject_getProperty")]
         public GetPropertyDel GetProperty { get; set; }
 
-        public delegate IntPtr GetPropertyDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string propertyName);
+        public delegate IntPtr GetPropertyDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string propertyName, ref byte result);
 
         [NativeSymbol(Entrypoint = "net_qobject_setProperty")]
         public SetPropertyDel SetProperty { get; set; }
         
-        public delegate IntPtr SetPropertyDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string propertyName, IntPtr netVariant);
+        public delegate IntPtr SetPropertyDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string propertyName, IntPtr netVariant, ref byte result);
 
         [NativeSymbol(Entrypoint = "net_qobject_invokeMethod")]
         public InvokeMethodDel InvokeMethod { get; set; }
         
-        public delegate IntPtr InvokeMethodDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string methodName, IntPtr parameters);
+        public delegate IntPtr InvokeMethodDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string methodName, IntPtr parameters, ref byte result);
         
         [NativeSymbol(Entrypoint = "net_qobject_attachSignal")]
         public AttachSignalDel AttachSignal { get; set; }
         
-        public delegate IntPtr AttachSignalDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string signalName, IntPtr del);
+        public delegate IntPtr AttachSignalDel(IntPtr qObject, [MarshalAs(UnmanagedType.LPWStr)] string signalName, IntPtr del, ref byte result);
     }
 }
