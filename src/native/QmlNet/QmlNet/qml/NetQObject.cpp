@@ -4,8 +4,30 @@
 #include <QMetaMethod>
 #include <QDebug>
 
-NetQObjectSignalConnection::NetQObjectSignalConnection(QSharedPointer<NetReference> delegate)
-    : _delegate(delegate)
+NetQObjectSignalConnectionBase::NetQObjectSignalConnectionBase()
+{
+
+}
+
+NetQObjectSignalConnectionBase::~NetQObjectSignalConnectionBase()
+{
+
+}
+
+QMetaMethod NetQObjectSignalConnectionBase::getSignalHandler()
+{
+    return metaObject()->method(metaObject()->methodOffset());
+}
+
+void NetQObjectSignalConnectionBase::signalRaised()
+{
+    qDebug() << "raised";
+}
+
+NetQObjectSignalConnection::NetQObjectSignalConnection(QSharedPointer<NetReference> delegate,
+                                                       QObject* qObject)
+    : _delegate(delegate),
+      _qObject(qObject)
 {
 
 }
@@ -15,15 +37,34 @@ NetQObjectSignalConnection::~NetQObjectSignalConnection()
 
 }
 
-QMetaMethod NetQObjectSignalConnection::getSignalHandler()
+int NetQObjectSignalConnection::qt_metacall(QMetaObject::Call c, int id, void** a)
 {
-    return metaObject()->method(metaObject()->methodOffset());
+    if(c == QMetaObject::InvokeMetaMethod)
+    {
+        QMetaMethod method = metaObject()->method(id);
+        if(method.name() == "signalRaised") {
+            qDebug() << "signal raised!";
+
+            qDebug() << senderSignalIndex();
+            QMetaMethod signal = _qObject->metaObject()->method(senderSignalIndex());
+            qDebug() << "signal: " << signal.name();
+
+            // Convert signal args to QVariantList
+            QVariantList args;
+            for (int i = 0; i < signal.parameterCount(); ++i) {
+                args << QVariant(signal.parameterType(i), a[i+1]);
+            }
+
+        }
+    }
+    return -1;
 }
 
-void NetQObjectSignalConnection::signalRaised()
-{
-    QmlNet::invokeDelegate(_delegate, QSharedPointer<NetVariantList>(new NetVariantList()));
-}
+
+//void NetQObjectSignalConnection::signalRaised()
+//{
+//    QmlNet::invokeDelegate(_delegate, QSharedPointer<NetVariantList>(new NetVariantList()));
+//}
 
 NetQObject::NetQObject(QObject* qObject, bool ownsObject) :
     _qObject(qObject),
@@ -98,6 +139,7 @@ QSharedPointer<NetVariant> NetQObject::invokeMethod(QString methodName, QSharedP
 //    QGenericArgument val9 = QGenericArgument()
     QGenericReturnArgument returnValue;
     int v = parameters->get(0)->getInt();
+    qDebug() << v;
     QGenericArgument val0 = QGenericArgument("Int", static_cast<void *>(&v));
     if(!method.invoke(_qObject, Qt::DirectConnection, returnValue, val0)) {
         return nullptr;
@@ -134,7 +176,7 @@ QSharedPointer<NetQObjectSignalConnection> NetQObject::attachSignal(QString sign
         return nullptr;
     }
 
-    QSharedPointer<NetQObjectSignalConnection> signalConnection = QSharedPointer<NetQObjectSignalConnection>(new NetQObjectSignalConnection(delegate));
+    QSharedPointer<NetQObjectSignalConnection> signalConnection = QSharedPointer<NetQObjectSignalConnection>(new NetQObjectSignalConnection(delegate, _qObject));
     qDebug() << signalConnection->getSignalHandler().name();
     QMetaObject::Connection connection = QObject::connect(_qObject,
                                                           signalMethod,

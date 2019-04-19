@@ -8,17 +8,26 @@
 class NetVariant;
 class NetVariantList;
 
-class NetQObjectSignalConnection : public QObject
+class NetQObjectSignalConnectionBase : public QObject
 {
     Q_OBJECT
 public:
-    NetQObjectSignalConnection(QSharedPointer<NetReference> delegate);
-    ~NetQObjectSignalConnection();
+    NetQObjectSignalConnectionBase();
+    ~NetQObjectSignalConnectionBase();
     QMetaMethod getSignalHandler();
 public slots:
     void signalRaised();
+};
+
+class NetQObjectSignalConnection : public NetQObjectSignalConnectionBase
+{
+public:
+    NetQObjectSignalConnection(QSharedPointer<NetReference> delegate, QObject* qObject);
+    ~NetQObjectSignalConnection() override;
+    int qt_metacall(QMetaObject::Call c, int id, void** a) override;
 private:
     QSharedPointer<NetReference> _delegate;
+    QObject* _qObject;
 };
 
 class NetQObject

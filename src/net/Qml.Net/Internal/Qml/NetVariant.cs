@@ -199,7 +199,20 @@ namespace Qml.Net.Internal.Qml
         public static NetVariant From<T>(T value)
         {
             var variant = new NetVariant();
-            Helpers.Pack(value, variant, typeof(T));
+            if (value != null)
+            {
+                Helpers.Pack(value, variant, typeof(T));
+            }
+            return variant;
+        }
+
+        public static NetVariant From(object value)
+        {
+            var variant = new NetVariant();
+            if (value != null)
+            {
+                Helpers.Pack(value, variant, value.GetType());
+            }
             return variant;
         }
     }
